@@ -1,23 +1,31 @@
-# Interactive Decision Map (IDM-style)
+# Interactive Decision Map (IDM‑style)
 
-## How to interpret the plots
-### Scatter Plot
-Shows a **2D slice** of the objective space defined by your chosen X/Y objectives. Grey = slice points, Red = global PF, Blue = local 2D PF.
+This viewer lets you explore multi‑objective datasets with **slider‑based brushing** across *all* metrics, a 2D scatter for any metric pair, and a **Parallel Coordinates** view. Click a point in the scatter to inspect its parameter + metric values; the corresponding line in PCP is highlighted immediately.
 
-### Parallel Coordinates Plot
-Each vertical axis is a **metric**. Each polyline is **one solution** in the slice. Lines near the bottom (0) are better; crossings show **trade-offs**.
-- Grey line = slice point
-- Blue line = currently selected point
-- Red (in earlier view) = global PF membership
+## How to interpret each plot
 
-### Inspection Window
-Click a grey slice point to see full parameter + metric values.
+### Scatter Plot (right, top)
+- X and Y axes: your selected `metric_*` columns (normalized to [0,1], lower is better).
+- **Grey** points: all **brushed** points (i.e., those within the slider ranges across all metrics).
+- **Red** points: brushed points that are also on the **global Pareto front** in the full metric space.
+- **Blue line**: **local 2D Pareto front** within the brushed subset for the selected (X,Y) metrics.
+- **Blue dot**: the **clicked/selected** point.
 
-### Brushing
-Drag on the PCP axes to define ranges. The scatter plot will update to show only points whose metric values fall within brushed intervals.
+### Parallel Coordinates (right, bottom)
+- One vertical axis per `metric_*`; values are normalized to [0,1] (lower is better).
+- **Grey lines**: all brushed points.
+- **Red lines** (when no point is selected): lines that are globally Pareto‑optimal.
+- **Blue line**: the currently **selected** point (if any).
+- Axis shading (constraint range) reflects your **slider brush** per metric.
+
+### Inspection Window (left)
+- Shows **param_*** (parameters) and **metric_*** (metrics) for the selected point.
+
+## Slider‑based brushing (recommended)
+Use the sliders (left column) to **constrain every metric’s range**. The constraints are applied to *all* points before plotting, so both the scatter and PCP show only the brushed subset. This gives you reliable, responsive brushing without relying on PCP’s internal (non‑exposed) events.
 
 ## Run
-```
+```bash
 python idm_viewer.py
 ```
-App at http://0.0.0.0:8050
+App runs at: http://0.0.0.0:8050
