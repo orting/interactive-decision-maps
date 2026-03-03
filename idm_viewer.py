@@ -2,284 +2,152 @@ import numpy as np
 import pandas as pd
 import base64, io
 import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output
+from dash import Dash, dcc, html, Input, Output, State
 from dash.dependencies import ALL
 from dash.exceptions import PreventUpdate
 
-# =========================
-# CSV Parsing
-# =========================
+app = Dash(__name__, suppress_callback_exceptions=True)
+
+# CSV parsing
 
 def parse_uploaded_csv(contents):
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
     df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-
     param_cols = [c for c in df.columns if c.startswith('param_')]
     metric_cols = [c for c in df.columns if c.startswith('metric_')]
-
-    if len(metric_cols) == 0:
-        raise ValueError('No metric_ columns found in the CSV file.')
-
     F = df[metric_cols].to_numpy()
-    labels = metric_cols
+    return df, F, metric_cols, param_cols
 
-    return df, F, labels, param_cols
-
-# =========================
-# Pareto Utilities
-# =========================
+# Pareto utils
 
 def pareto_front(F):
     n = F.shape[0]
     mask = np.ones(n, dtype=bool)
     for i in range(n):
-        if not mask[i]:
-            continue
-        dominated = np.all(F <= F[i], axis=1) & np.any(F < F[i], axis=1)
+        if not mask[i]: continue
+        dominated = np.all(F <= F[i], 1) & np.any(F < F[i], 1)
         mask[dominated] = False
     return mask
 
+
 def pareto_front_2d(F2):
-    idx = np.argsort(F2[:, 0])
-    best = np.inf
-    mask = np.zeros(F2.shape[0], dtype=bool)
+    idx = np.argsort(F2[:,0]); best = np.inf
+    mask = np.zeros(F2.shape[0], bool)
     for i in idx:
-        if F2[i, 1] < best:
-            best = F2[i, 1]
-            mask[i] = True
+        if F2[i,1] < best:
+            best = F2[i,1]; mask[i] = True
     return mask
 
-# =========================
-# Slice Logic
-# =========================
+# Slice
 
-def slice_points(F, obj_i, obj_j, ranges):
-    n_obj = F.shape[1]
-    mask = np.ones(F.shape[0], dtype=bool)
-    for k in range(n_obj):
-        if k == obj_i or k == obj_j:
-            continue
-        low, high = ranges[k]
-        mask &= (F[:, k] >= low) & (F[:, k] <= high)
+def slice_points(F, obj_x, obj_y, ranges):
+    mask = np.ones(F.shape[0], bool)
+    for k,(lo,hi) in enumerate(ranges):
+        if k in (obj_x,obj_y): continue
+        mask &= (F[:,k] >= lo) & (F[:,k] <= hi)
     return mask
 
-# =========================
-# Dash App
-# =========================
-
-app = Dash(__name__, suppress_callback_exceptions=True)
-
+# Layout
 app.layout = html.Div([
-    html.H2("Interactive Decision Map (IDM-style)"),
-
-    html.Div(style={"display": "flex", "flex-direction": "row", "gap": "20px"}, children=[
-
-        # LEFT COLUMN
-        html.Div(style={"flex": "1", "min-width": "320px"}, children=[
-
-            dcc.Upload(
-                id='upload-data',
-                children=html.Div(['Drag and drop or ', html.A('Select CSV File')]),
-                style={
-                    'width': '100%', 'height': '60px', 'lineHeight': '60px',
-                    'borderWidth': '1px', 'borderStyle': 'dashed', 'borderRadius': '5px',
-                    'textAlign': 'center', 'margin-bottom': '20px'
-                },
-                multiple=False
-            ),
-            html.Div(id='file-info'),
-
-            dcc.Store(id='data-store'),
-            dcc.Store(id='params-store'),
-            dcc.Store(id='labels-store'),
-
-            html.H4("Objective selection"),
-            html.Label("X-axis objective"),
-            dcc.Dropdown(id='obj-x', options=[], value=None, clearable=False),
-            html.Label("Y-axis objective"),
-            dcc.Dropdown(id='obj-y', options=[], value=None, clearable=False),
-
-            html.H4("Slice ranges"),
-            html.Div(id='slider-container'),
-
-            html.H4("Point inspection"),
-            html.Div(id='inspection-window', style={
-                "border": "1px solid #aaa",
-                "padding": "10px",
-                "margin-top": "10px",
-                "background": "#fafafa",
-                "min-height": "120px"
-            }),
-        ]),
-
-        # RIGHT COLUMN
-        html.Div(style={"flex": "2"}, children=[
-            dcc.Graph(id='slice-plot', style={'height': '900px'})
-        ])
-    ])
+ html.H2("Interactive Decision Map"),
+ html.Div(style={'display':'flex','gap':'20px'},children=[
+  html.Div(style={'flex':'1'},children=[
+    dcc.Upload(id='upload',children=html.Div(['Drag CSV or ',html.A('Select')]),
+               style={'border':'1px dashed #aaa','height':'60px','textAlign':'center'}),
+    html.Div(id='fileinfo'),
+    dcc.Store(id='store'),dcc.Store(id='params'),dcc.Store(id='metrics'),dcc.Store(id='selected-index'),
+    html.Label("X objective"), dcc.Dropdown(id='obj-x'),
+    html.Label("Y objective"), dcc.Dropdown(id='obj-y'),
+    html.Div(id='sliders'),
+    html.H4("Point inspection"),html.Div(id='inspect',style={'border':'1px solid #aaa','padding':'8px'})
+  ]),
+  html.Div(style={'flex':'2'},children=[
+    dcc.Graph(id='scatter',style={'height':'520px'}),
+    dcc.Graph(id='pcp',style={'height':'360px'})
+  ])
+ ])
 ])
 
-# =========================
-# Callbacks
-# =========================
-
+# Load CSV
 @app.callback(
-    Output('data-store', 'data'),
-    Output('params-store', 'data'),
-    Output('labels-store', 'data'),
-    Output('file-info', 'children'),
-    Input('upload-data', 'contents')
-)
-def load_csv(contents):
-    if contents is None:
-        raise PreventUpdate
+ Output('store','data'),Output('params','data'),Output('metrics','data'),Output('fileinfo','children'),
+ Input('upload','contents') )
+def load(contents):
+ if contents is None:
+  raise PreventUpdate
+ df,F,metrics,param_cols = parse_uploaded_csv(contents)
+ Fmin,Fmax = F.min(0),F.max(0)
+ Fnorm = (F-Fmin)/(Fmax-Fmin+1e-12)
+ pf = pareto_front(Fnorm).tolist()
+ return {'F':Fnorm.tolist(),'pf':pf,'df':df.to_dict('records')},param_cols,metrics,f"Loaded {len(df)} rows"
 
-    df, F, labels, param_cols = parse_uploaded_csv(contents)
-    Fmin, Fmax = F.min(axis=0), F.max(axis=0)
-    F_norm = (F - Fmin) / (Fmax - Fmin + 1e-12)
-    global_pf = pareto_front(F_norm).tolist()
-
-    return (
-        {
-            'F_norm': F_norm.tolist(),
-            'global_pf': global_pf,
-            'df': df.to_dict('records')
-        },
-        param_cols,
-        labels,
-        f"Loaded file with {len(df)} rows, {len(labels)} metric columns, {len(param_cols)} parameter columns."
-    )
-
+# Build selectors
 @app.callback(
-    Output('obj-x', 'options'),
-    Output('obj-y', 'options'),
-    Output('slider-container', 'children'),
-    Input('labels-store', 'data')
-)
-def update_selectors(labels):
-    if labels is None:
-        raise PreventUpdate
-    options = [{'label': l, 'value': i} for i, l in enumerate(labels)]
-    sliders = []
-    for i, label in enumerate(labels):
-        sliders.append(html.Div([
-            html.Label(f"{label} range"),
-            dcc.RangeSlider(id={'type': 'metric-slider', 'index': i}, min=0, max=1, step=0.01, value=[0, 1])
-        ], style={'margin': '10px 0'}))
-    return options, options, sliders
+ Output('obj-x','options'),Output('obj-y','options'),Output('sliders','children'),
+ Input('metrics','data') )
+def sels(metrics):
+ if metrics is None: raise PreventUpdate
+ opts=[{'label':m,'value':i} for i,m in enumerate(metrics)]
+ sliders=[ html.Div([html.Label(m), dcc.RangeSlider(id={'type':'sld','index':i},min=0,max=1,step=0.01,value=[0,1])]) for i,m in enumerate(metrics) ]
+ return opts,opts,sliders
 
+# Update both plots
 @app.callback(
-    Output('slice-plot', 'figure'),
-    Input('obj-x', 'value'),
-    Input('obj-y', 'value'),
-    Input('data-store', 'data'),
-    Input('params-store', 'data'),
-    Input('labels-store', 'data'),
-    Input({'type': 'metric-slider', 'index': ALL}, 'value')
-)
-def update_plot(obj_x, obj_y, data, param_cols, labels, slider_values):
-    if data is None or labels is None:
-        raise PreventUpdate
-    if obj_x is None or obj_y is None or obj_x == obj_y:
-        fig = go.Figure()
-        fig.update_layout(title='Select two different objectives.')
-        return fig
+ Output('scatter','figure'),Output('pcp','figure'),
+ Input('obj-x','value'),Input('obj-y','value'),Input('store','data'),Input('params','data'),Input('metrics','data'),
+ Input({'type':'sld','index':ALL},'value'),State('selected-index','data') )
+def update(objx,objy,data,param_cols,metrics,slvals,selected):
+ if data is None or objx is None or objy is None or objx==objy:
+  return go.Figure(),go.Figure()
+ F=np.array(data['F']);df=pd.DataFrame(data['df']);pf=np.array(data['pf'])
+ ranges=slvals[:len(metrics)]
+ mask=slice_points(F,objx,objy,ranges)
+ Fs=F[mask]; dfs=df[mask]; pfs=pf[mask]
+ if len(Fs)==0: return go.Figure(),go.Figure()
 
-    F_norm = np.array(data['F_norm'])
-    df = pd.DataFrame(data['df'])
-    global_pf = np.array(data['global_pf'])
+ # Scatter
+ F2=Fs[:,[objx,objy]]
+ locpf=pareto_front_2d(F2)
+ hover=[ '<br>'.join(f"{p}:{row[p]}" for p in param_cols) for _,row in dfs[param_cols].iterrows() ]
+ figS=go.Figure()
+ figS.add_trace(go.Scatter(x=F2[:,0],y=F2[:,1],mode='markers',marker=dict(size=6,color='lightgray'),
+   text=hover,hoverinfo='text',customdata=dfs.index.astype(int).tolist(),name='Slice'))
+ if pfs.any():
+  G=F2[pfs]
+  figS.add_trace(go.Scatter(x=G[:,0],y=G[:,1],mode='markers',marker=dict(size=8,color='red'),name='Global PF'))
+ P=F2[locpf]
+ ord=np.argsort(P[:,0]);P=P[ord]
+ figS.add_trace(go.Scatter(x=P[:,0],y=P[:,1],mode='lines+markers',name='Local PF'))
+ figS.update_layout(title=f"{metrics[objx]} vs {metrics[objy]}")
 
-    ranges = slider_values[: len(labels)]
-    ranges = [(low, high) for (low, high) in ranges]
+ # PCP
+ dims=[ dict(label=m,range=[0,1],values=Fs[:,i]) for i,m in enumerate(metrics) ]
 
-    mask = slice_points(F_norm, obj_x, obj_j=obj_y, ranges=ranges)
-    F_slice = F_norm[mask]
-    df_slice = df[mask]
+ # Color: highlight selected
+ if selected is not None:
+  col=[1 if dfs.index[i]==selected else 0 for i in range(len(dfs))]
+ else:
+  col=(pfs.astype(int)).tolist()
 
-    if len(F_slice) == 0:
-        fig = go.Figure()
-        fig.update_layout(title='No points in slice.')
-        return fig
+ figP=go.Figure(data=go.Parcoords(line=dict(color=col,colorscale=[[0,'lightgray'],[1,'blue']],cmin=0,cmax=1),dimensions=dims))
+ return figS,figP
 
-    F2 = F_slice[:, [obj_x, obj_y]]
-    local_pf = pareto_front_2d(F2)
-    global_pf_slice = global_pf[mask]
+# Click highlight
+@app.callback(Output('selected-index','data'),Input('scatter','clickData'))
+def click(clickData):
+ if clickData is None: return None
+ pt=clickData['points'][0]
+ if pt.get('curveNumber')!=0: return None
+ return int(pt['customdata'])
 
-    # Hover text: parameters only
-    hovertext = [
-        '<br>'.join([f"{c}: {row[c]}" for c in param_cols])
-        for _, row in df_slice[param_cols].iterrows()
-    ]
+# Inspect
+@app.callback(Output('inspect','children'),Input('selected-index','data'),State('store','data'),State('params','data'),State('metrics','data'))
+def inspect(idx,data,param_cols,metrics):
+ if idx is None: return "Click slice point"
+ df=pd.DataFrame(data['df']); row=df.loc[idx]
+ return html.Div([
+  html.H5('Parameters'),html.Ul([html.Li(f"{p}:{row[p]}") for p in param_cols]),
+  html.H5('Metrics'),html.Ul([html.Li(f"{m}:{row[m]}") for m in metrics]) ])
 
-    # Slice scatter with robust customdata
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=F2[:,0], y=F2[:,1], mode='markers',
-        marker=dict(size=6, color='lightgray'),
-        name='Slice points', text=hovertext, hoverinfo='text',
-        customdata=df_slice.index.astype(int).tolist()
-    ))
-
-    # Global PF
-    if any(global_pf_slice):
-        G = F2[global_pf_slice]
-        fig.add_trace(go.Scatter(
-            x=G[:,0], y=G[:,1],
-            mode='markers', marker=dict(size=8, color='red'), name='Global PF'
-        ))
-
-    # Local PF
-    PF = F2[local_pf]
-    order = np.argsort(PF[:,0])
-    PF = PF[order]
-    fig.add_trace(go.Scatter(
-        x=PF[:,0], y=PF[:,1], mode='lines+markers', marker=dict(size=7), name='Local PF'
-    ))
-
-    fig.update_layout(title=f"{labels[obj_x]} vs {labels[obj_y]}", xaxis_title=labels[obj_x], yaxis_title=labels[obj_y])
-    return fig
-
-# =========================
-# Point Inspection Window
-# =========================
-
-@app.callback(
-    Output('inspection-window', 'children'),
-    Input('slice-plot', 'clickData'),
-    Input('data-store', 'data'),
-    Input('params-store', 'data'),
-    Input('labels-store', 'data')
-)
-def show_details(clickData, data, param_cols, metric_cols):
-    if clickData is None or data is None:
-        return "Click a grey slice point to inspect its values."
-
-    point = clickData['points'][0]
-
-    # Accept only clicks on trace 0 (slice points)
-    if point.get('curveNumber', None) != 0:
-        return "Click a grey slice point to inspect its values."
-
-    if 'customdata' not in point:
-        return "Click a grey slice point to inspect its values."
-
-    row_index = int(point['customdata'])
-
-    df = pd.DataFrame(data['df'])
-    row = df.loc[row_index]
-
-    return html.Div([
-        html.H5("Parameters"),
-        html.Ul([html.Li(f"{p}: {row[p]}") for p in param_cols]),
-
-        html.H5("Metrics"),
-        html.Ul([html.Li(f"{m}: {row[m]}") for m in metric_cols])
-    ])
-
-# =========================
-# Main
-# =========================
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8050, debug=True)
+if __name__=='__main__': app.run(host='0.0.0.0',port=8050,debug=True)
