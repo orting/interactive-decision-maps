@@ -1,18 +1,28 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=65"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "interactive-decision-map"
-version = "0.5.0"
-description = "Interactive Decision Map with CSV upload, two-column layout, inspection window, and pattern-matching callbacks"
+name = "idm-viewer"
+version = "0.1.0"
+description = "Interactive Decision Map viewer with brushing, PCP, color-by, and dark mode."
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+
+authors = [
+    { name = "Silas Nyboe Ørting" }
+]
 
 dependencies = [
+    "dash>=3.0",
+    "plotly>=5.0",
     "numpy>=1.21",
     "pandas>=1.5",
-    "plotly>=5.0",
-    "dash>=3.0"
 ]
+
+[project.scripts]
+idm-viewer = "idm_viewer.app:main"
+
+[tool.setuptools]
+package-data = { "idm_viewer" = ["assets/*"] }
