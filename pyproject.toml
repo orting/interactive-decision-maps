@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "interactive-decision-map"
+version = "0.4.0"
+description = "Interactive Decision Map viewer with CSV upload and pattern-matching callbacks"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+
+dependencies = [
+    "numpy>=1.21",
+    "pandas>=1.5",
+    "plotly>=5.0",
+    "dash>=3.0"
+]
