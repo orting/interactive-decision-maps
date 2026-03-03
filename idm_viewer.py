@@ -12,6 +12,25 @@ from dash.exceptions import PreventUpdate
 app = Dash(__name__, suppress_callback_exceptions=True)
 
 # =========================
+# Utils
+# =========================
+
+def strip_prefix(name: str) -> str:
+    if name.startswith('param_'):
+        return name[len('param_'):]
+    if name.startswith('metric_'):
+        return name[len('metric_'):]
+    return name
+
+
+def fmt_sci(val):
+    try:
+        f = float(val)
+        return f"{f:.10e}"  # scientific notation, up to 10 decimals
+    except Exception:
+        return str(val)
+
+# =========================
 # Data helpers
 # =========================
 
@@ -50,9 +69,6 @@ def pareto_front_2d(F2: np.ndarray) -> np.ndarray:
 
 
 def apply_ranges(F: np.ndarray, ranges):
-    """Return boolean mask selecting rows where ALL objectives fall within given ranges.
-    ranges: list[(low, high)] length == n_obj
-    """
     mask = np.ones(F.shape[0], dtype=bool)
     for k, (low, high) in enumerate(ranges):
         mask &= (F[:, k] >= low) & (F[:, k] <= high)
@@ -127,7 +143,7 @@ def load(contents):
     }, param_cols, metrics, f"Loaded {len(df)} rows, {len(metrics)} metrics, {len(param_cols)} parameters."
 
 
-# Build objective selectors + metric sliders
+# Build objective selectors + metric sliders (display names without prefixes)
 @app.callback(
     Output('obj-x', 'options'),
     Output('obj-y', 'options'),
@@ -138,17 +154,17 @@ def load(contents):
 def build_controls(metrics):
     if metrics is None:
         raise PreventUpdate
-    options = [{'label': m, 'value': i} for i, m in enumerate(metrics)]
+    options = [{'label': strip_prefix(m), 'value': i} for i, m in enumerate(metrics)]
     sliders = []
     for i, m in enumerate(metrics):
         sliders.append(html.Div([
-            html.Label(m),
+            html.Label(strip_prefix(m)),
             dcc.RangeSlider(id={'type': 'sld', 'index': i}, min=0, max=1, step=0.01, value=[0, 1])
         ], style={'margin': '6px 0'}))
     return options, options, sliders
 
 
-# Update plots (scatter + PCP) — trigger also on selected-index for instant highlight
+# Update plots — include selected-index input for instant highlight
 @app.callback(
     Output('scatter', 'figure'),
     Output('pcp', 'figure'),
@@ -169,7 +185,6 @@ def update_plots(objx, objy, data, param_cols, metrics, slvals, selected):
     df = pd.DataFrame(data['df'])
     pf = np.array(data['pf'])
 
-    # Slider-based brushing across ALL metrics, including X and Y
     ranges = slvals[:len(metrics)] if slvals else [[0, 1]] * len(metrics)
     mask = apply_ranges(F, ranges)
 
@@ -180,60 +195,71 @@ def update_plots(objx, objy, data, param_cols, metrics, slvals, selected):
         fig_empty = go.Figure(); fig_empty.update_layout(title='No points within current brush ranges.')
         return fig_empty, go.Figure()
 
-    # ---- Scatter (slice on objx/objy) ----
+    # ---- Scatter (X/Y metrics) ----
     F2 = Fs[:, [objx, objy]]
     local_pf = pareto_front_2d(F2)
 
-    hover = [
-        '<br>'.join(f"{p}: {row[p]}" for p in param_cols)
-        for _, row in dfs[param_cols].iterrows()
-    ]
+    # Hover text should show **metric values only** (no parameters), formatted with stripped names
+    hover = []
+    for idx, row in dfs.iterrows():
+        lines = []
+        for k, m in enumerate(metrics):
+            # Only include metrics in hover; display stripped names and current normalized values
+            lines.append(f"{strip_prefix(m)}: {fmt_sci(Fs[dfs.index.get_loc(idx), k])}")
+        hover.append('<br>'.join(lines))
 
     figS = go.Figure()
-    # Base: all brushed points (grey)
-    figS.add_trace(go.Scatter(
-        x=F2[:, 0], y=F2[:, 1], mode='markers',
-        marker=dict(size=6, color='lightgray'),
-        name='Brushed points', text=hover, hoverinfo='text',
-        customdata=dfs.index.astype(int).tolist()
-    ))
+    # Base: all brushed points (grey) — ONLY this trace shows hover text
+    figS.add_trace(
+        go.Scatter(
+            x=F2[:, 0], y=F2[:, 1], mode='markers',
+            marker=dict(size=6, color='lightgray'),
+            name='Brushed points', text=hover, hoverinfo='text',
+            customdata=dfs.index.astype(int).tolist()
+        )
+    )
 
-    # Overlay: global PF points among brushed (red)
+    # Global PF: disable hover popups
     if pfs.any():
         G = F2[pfs]
-        figS.add_trace(go.Scatter(x=G[:, 0], y=G[:, 1], mode='markers',
-                                  marker=dict(size=8, color='red'), name='Global PF'))
+        figS.add_trace(go.Scatter(
+            x=G[:, 0], y=G[:, 1], mode='markers', marker=dict(size=8, color='red'),
+            name='Global PF', hoverinfo='skip'
+        ))
 
-    # Overlay: local 2D PF on the brushed subset (blue line)
+    # Local 2D PF: disable hover popups
     P = F2[local_pf]
     order = np.argsort(P[:, 0])
     P = P[order]
-    figS.add_trace(go.Scatter(x=P[:, 0], y=P[:, 1], mode='lines+markers',
-                              marker=dict(size=7), name='Local 2D PF'))
+    figS.add_trace(go.Scatter(
+        x=P[:, 0], y=P[:, 1], mode='lines+markers', marker=dict(size=7),
+        name='Local 2D PF', hoverinfo='skip'
+    ))
 
-    # Overlay: selected point (blue dot) — immediate highlight
+    # Selected point: disable hover popups
     if selected is not None:
-        # Position within brushed set
         sel_pos = np.where(dfs.index.values == selected)[0]
         if len(sel_pos) == 1:
             i = sel_pos[0]
             figS.add_trace(go.Scatter(
                 x=[F2[i, 0]], y=[F2[i, 1]], mode='markers',
                 marker=dict(size=12, color='blue', line=dict(color='white', width=1)),
-                name='Selected'
+                name='Selected', hoverinfo='skip'
             ))
 
-    figS.update_layout(title=f"{metrics[objx]} vs {metrics[objy]}", xaxis_title=metrics[objx], yaxis_title=metrics[objy])
+    figS.update_layout(
+        title=f"{strip_prefix(metrics[objx])} vs {strip_prefix(metrics[objy])}",
+        xaxis_title=strip_prefix(metrics[objx]), yaxis_title=strip_prefix(metrics[objy])
+    )
 
-    # ---- Parallel Coordinates (show all brushed points across all metrics) ----
+    # ---- Parallel Coordinates (brushed subset across all metrics) ----
     dims = []
     for k, m in enumerate(metrics):
-        dim = dict(label=m, range=[0, 1], values=Fs[:, k])
-        # Show slider brush on axes using constraintrange visual
+        dim = dict(label=strip_prefix(m), range=[0, 1], values=Fs[:, k])
         dim['constraintrange'] = [ranges[k][0], ranges[k][1]]
         dims.append(dim)
 
-    # Color lines: highlight selected if present, else color by PF membership
+    # Color lines: selected line blue, else PF red
     if selected is not None:
         color = [1 if dfs.index.values[i] == selected else 0 for i in range(len(dfs))]
         colorscale = [[0, 'lightgray'], [1, 'blue']]
@@ -250,7 +276,7 @@ def update_plots(objx, objy, data, param_cols, metrics, slvals, selected):
     return figS, figP
 
 
-# Click in scatter → select point (works immediately due to selected-index as Input to update_plots)
+# Click in scatter → select point
 @app.callback(
     Output('selected-index', 'data'),
     Input('scatter', 'clickData')
@@ -260,12 +286,12 @@ def set_selected(clickData):
     if clickData is None:
         return None
     pt = clickData['points'][0]
-    if pt.get('curveNumber') != 0:  # only base scatter (grey) is selectable
+    if pt.get('curveNumber') != 0:  # only grey base trace selectable
         return None
     return int(pt['customdata'])
 
 
-# Inspection panel (parameters + metrics)
+# Inspection panel with formatted values (scientific notation, <=10 decimals) and stripped names
 @app.callback(
     Output('inspect', 'children'),
     Input('selected-index', 'data'),
@@ -279,9 +305,11 @@ def inspect(idx, data, param_cols, metrics):
     if idx not in df.index:
         return "Selected point is outside current brush."
     row = df.loc[idx]
+    param_items = [html.Li(f"{strip_prefix(p)}: {fmt_sci(row[p])}") for p in param_cols]
+    metric_items = [html.Li(f"{strip_prefix(m)}: {fmt_sci(row[m])}") for m in metrics]
     return html.Div([
-        html.H5('Parameters'), html.Ul([html.Li(f"{p}: {row[p]}") for p in param_cols]),
-        html.H5('Metrics'), html.Ul([html.Li(f"{m}: {row[m]}") for m in metrics])
+        html.H5('Parameters'), html.Ul(param_items),
+        html.H5('Metrics'), html.Ul(metric_items)
     ])
 
 
