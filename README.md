@@ -1,13 +1,18 @@
 # Interactive Decision Map (IDM-style)
 
-Supports CSV uploads with:
-- parameter columns: param_*
-- metric columns: metric_*
+Now includes:
+- Two-column layout (left controls, right plot)
+- CSV upload with param_ and metric_ detection
+- Hover shows parameters only
+- Click-to-inspect window showing parameters and metrics
+- Pattern-matching callbacks for sliders
 
-Now uses **Dash pattern-matching callbacks** for dynamic sliders.
-
-Run:
+## Run
 ```bash
 python idm_viewer.py
 ```
-App runs at http://0.0.0.0:8050
+
+App runs at:
+```
+http://0.0.0.0:8050
+```
