@@ -1,0 +1,200 @@
+/* =============================
+   Light theme (default)
+   Dark theme via `.dark`
+   ============================= */
+
+/* Light mode tokens */
+:root {
+  --bg: #ffffff;
+  --surface: #f7f7f8;
+  --text: #0b1220;
+  --muted: #5b667a;
+  --border: #e6e7ea;
+  --accent: #2563eb;
+  --accent-contrast: #ffffff;
+  --ring: #c7d2fe;
+}
+
+/* Dark mode tokens */
+:root.dark {
+  --bg: #0b1220;
+  --surface: #111827;
+  --text: #eef2ff;
+  --muted: #a3adbf;
+  --border: #1f2937;
+  --accent: #60a5fa;
+  --accent-contrast: #0b1220;
+  --ring: #374151;
+}
+
+/* Global */
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+}
+
+a { color: var(--accent); }
+a:hover { opacity: 0.85; }
+hr { border: 0; border-top: 1px solid var(--border); }
+
+/* Buttons */
+.theme-button {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  border: none;
+  cursor: pointer;
+}
+.theme-button:hover { opacity: .92; }
+.theme-button:focus {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Floating Theme Toggle Button */
+#theme-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 4px;
+  cursor: pointer;
+  z-index: 99999;
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+}
+#theme-toggle .icon-dark { display: none; }
+:root.dark #theme-toggle .icon-light { display: none; }
+:root.dark #theme-toggle .icon-dark { display: inline; }
+
+/* Inputs (generic) */
+:root.dark input,
+:root.dark select,
+:root.dark textarea {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+}
+
+:root input,
+:root select,
+:root textarea {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* ===========================================================
+   DARK MODE — Modern Dash Dropdown (.dash-dropdown)
+   =========================================================== */
+
+/* Dropdown wrapper */
+:root.dark .dash-dropdown {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px;
+}
+
+/* Apply theme to every child inside dropdown */
+:root.dark .dash-dropdown * {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* Hover / focus */
+:root.dark .dash-dropdown *:hover,
+:root.dark .dash-dropdown *:focus {
+  background: var(--accent) !important;
+  color: var(--accent-contrast) !important;
+}
+
+/* ===========================================================
+   Dropdown Popover: Options List
+   =========================================================== */
+
+:root.dark .dash-options-list {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,.30) !important;
+  z-index: 10000 !important;
+}
+
+:root.dark .dash-options-list-option.dash-dropdown-option {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+:root.dark .dash-options-list-option.dash-dropdown-option:last-child {
+  border-bottom: none !important;
+}
+
+:root.dark .dash-options-list-option--focused,
+:root.dark .dash-options-list-option.dash-dropdown-option:hover {
+  background: var(--accent) !important;
+  color: var(--accent-contrast) !important;
+}
+
+/* ===========================================================
+   Dropdown Popover: Search Box
+   =========================================================== */
+
+:root.dark .dash-dropdown-grid-container {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+:root.dark .dash-dropdown-search-container {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+/* Search input */
+:root.dark .dash-dropdown-search-container input {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  padding: 6px 8px !important;
+  outline: none !important;
+}
+
+/* Placeholder inside search */
+:root.dark .dash-dropdown-search-container input::placeholder {
+  color: var(--muted) !important;
+}
+
+/* Focus / hover styling */
+:root.dark .dash-dropdown-search-container input:hover,
+:root.dark .dash-dropdown-search-container input:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 30%, transparent) !important;
+}
+
+/* ===========================================================
+   Dropdown Popover Chrome (.dash-dropdown-content)
+   =========================================================== */
+
+:root.dark .dash-dropdown-content {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,.30) !important;
+  outline: none !important;
+}
+
+:root.dark .dash-dropdown-content *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

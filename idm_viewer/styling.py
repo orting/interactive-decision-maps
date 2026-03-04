@@ -1,8 +1,11 @@
-def is_dark(theme):
-    return theme == "dark"
+# styling.py
 
-def template(theme):
-    return "plotly_dark" if is_dark(theme) else "plotly_white"
+import plotly.graph_objects as go
+
+# Simple layout helper — always template=None
+def themed_layout(**kwargs):
+    return go.Layout(template=None, **kwargs)
+
 
 def main_colorscale():
     return "Viridis"
