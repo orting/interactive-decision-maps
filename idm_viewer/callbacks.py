@@ -25,9 +25,18 @@ def register_callbacks(app):
         Output("params", "data"),
         Output("metrics", "data"),
         Output("fileinfo", "children"),
-        Input("upload", "contents")
+        Input("upload", "contents"),
+        Input("load-sample", "n_clicks"),
+        prevent_initial_call=True
     )
-    def load(contents):
+    def load(contents, sample_clicks):
+        # Handle sample data button
+        if sample_clicks is not None and sample_clicks > 0:
+            from pathlib import Path
+            sample_path = Path(__file__).parent / "assets" / "sample_data.csv"
+            with open(sample_path, 'r') as f:
+                contents = f.read()
+        
         # SAFETY: first app load -> contents is None
         if contents is None:
             raise PreventUpdate
