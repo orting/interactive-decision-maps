@@ -55,8 +55,9 @@ def register_callbacks(app):
         pf = pareto_front(F_norm).tolist()
 
         # Auto-select defaults when sample data is loaded
-        obj_x = "metric_obj1" if is_sample else None
-        obj_y = "metric_obj4" if is_sample else None
+        # obj-x/obj-y values are metric indices, color-by is the full column name
+        obj_x = 0 if is_sample else None  # metric_obj1 is at index 0
+        obj_y = 3 if is_sample else None  # metric_obj4 is at index 3
         color_by = "param_feature2" if is_sample else None
 
         return (
