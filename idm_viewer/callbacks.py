@@ -95,6 +95,7 @@ def register_callbacks(app):
     @app.callback(
         Output("scatter", "figure"),
         Output("pcp", "figure"),
+        Output("radar", "figure"),
         Input("obj-x", "value"),
         Input("obj-y", "value"),
         Input("store", "data"),
@@ -244,7 +245,65 @@ def register_callbacks(app):
                     "dimensions": dims
                 })
 
-        return scatter, pcp
+        # ---- Radar plot (all metrics for brushed points)
+        radar = {
+            "data": [],
+            "layout": {
+                "template": None,
+                "polar": {
+                    "radialaxis": {
+                        "visible": True,
+                        "range": [0, 1],
+                        "tickfont": {"size": 10}
+                    },
+                    "angularaxis": {
+                        "tickfont": {"size": 11}
+                    }
+                },
+                "title": "Metric Profiles (Brushed Subset)"
+            }
+        }
+
+        # Add brushed points as radar traces
+        for i in range(len(Fs)):
+            metric_values = Fs[i].tolist()
+            metric_labels = [strip_prefix(m) for m in metrics]
+            
+            # Color by the selected column
+            trace_color = col_values[i] if len(col_values) > i else 0.5
+            trace_opacity = 0.6
+            
+            radar["data"].append({
+                "type": "scatterpolar",
+                "r": metric_values,
+                "theta": metric_labels,
+                "fill": "toself",
+                "name": f"Point {df_s.index[i]}",
+                "opacity": trace_opacity,
+                "hoverinfo": "r+theta+name"
+            })
+
+        # Highlight selected point
+        if selected is not None:
+            pos = np.where(df_s.index.values == selected)[0]
+            if len(pos) == 1:
+                i = pos[0]
+                metric_values = Fs[i].tolist()
+                metric_labels = [strip_prefix(m) for m in metrics]
+                
+                # Replace the selected point's trace with a highlighted version
+                radar["data"][i] = {
+                    "type": "scatterpolar",
+                    "r": metric_values,
+                    "theta": metric_labels,
+                    "fill": "toself",
+                    "name": f"Selected Point {selected}",
+                    "opacity": 0.8,
+                    "line": {"color": "blue", "width": 2},
+                    "hoverinfo": "r+theta+name"
+                }
+
+        return scatter, pcp, radar
 
     # ---------------------- CLICK ON SCATTER ----------------------
     @app.callback(
