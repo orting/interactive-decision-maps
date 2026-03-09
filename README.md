@@ -1,31 +1,56 @@
-# Interactive Decision Map (IDM‑style)
+# Interactive Decision Map (IDM-style)
 
-This viewer lets you explore multi‑objective datasets with **slider‑based brushing** across *all* metrics, a 2D scatter for any metric pair, and a **Parallel Coordinates** view. Click a point in the scatter to inspect its parameter + metric values; the corresponding line in PCP is highlighted immediately.
+This viewer lets you explore multi-objective datasets with **slider-based brushing** across *all* metrics, interactive visualizations of metric relationships, and detailed inspection of individual solutions. Click a point to highlight it across all views.
+
+## Features
+
+- **Tabbed Visualization Layout**: Three complementary views to analyze trade-offs
+  - **Scatter Plot**: 2D metric space with Pareto front highlighting
+  - **Parallel Coordinates**: All metrics for brushed points with constraint ranges
+  - **Radar Plot**: Multi-objective profiles as polar dimensions
+- **Slider-based Brushing**: Filter solutions across all metrics with responsive updates
+- **Sample Data Loader**: Quick-start with built-in test dataset
+- **Point Inspection**: Click any point to see its parameters and metrics
 
 ## How to interpret each plot
 
-### Scatter Plot (right, top)
+### Scatter Plot
 - X and Y axes: your selected `metric_*` columns (normalized to [0,1], lower is better).
 - **Grey** points: all **brushed** points (i.e., those within the slider ranges across all metrics).
 - **Red** points: brushed points that are also on the **global Pareto front** in the full metric space.
 - **Blue line**: **local 2D Pareto front** within the brushed subset for the selected (X,Y) metrics.
 - **Blue dot**: the **clicked/selected** point.
 
-### Parallel Coordinates (right, bottom)
+### Parallel Coordinates
 - One vertical axis per `metric_*`; values are normalized to [0,1] (lower is better).
 - **Grey lines**: all brushed points.
-- **Red lines** (when no point is selected): lines that are globally Pareto‑optimal.
+- **Red lines** (when no point is selected): lines that are globally Pareto-optimal.
 - **Blue line**: the currently **selected** point (if any).
 - Axis shading (constraint range) reflects your **slider brush** per metric.
 
+### Radar Plot
+- One polar axis per `metric_*`; values are normalized to [0,1] (lower is better).
+- **Semi-transparent traces**: all brushed points, colored by the selected dimension.
+- **Solid blue trace**: the currently **selected** point (highlighted for clarity).
+- Useful for understanding multi-objective trade-offs and comparing metric profiles across solutions.
+
 ### Inspection Window (left)
 - Shows **param_*** (parameters) and **metric_*** (metrics) for the selected point.
+- Color dimension selector to highlight patterns in the data.
 
-## Slider‑based brushing (recommended)
-Use the sliders (left column) to **constrain every metric’s range**. The constraints are applied to *all* points before plotting, so both the scatter and PCP show only the brushed subset. This gives you reliable, responsive brushing without relying on PCP’s internal (non‑exposed) events.
+## Slider-based brushing (recommended)
+Use the sliders (left column) to **constrain every metric's range**. The constraints are applied to *all* points before plotting, so all views show only the brushed subset. This gives you reliable, responsive filtering without external events.
+
+## Quick Start
+
+Load sample data by clicking the **"Load Sample"** button next to the CSV upload box. No file needed—instant exploration!
+
+Or upload your own CSV with columns formatted as:
+- `param_*`: parameter/design variable columns
+- `metric_*`: objective/performance metric columns
 
 ## Run
 ```bash
-python idm_viewer.py
+python idm_viewer/app.py
 ```
 App runs at: http://0.0.0.0:8050
