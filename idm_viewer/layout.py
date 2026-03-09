@@ -15,12 +15,21 @@ layout = html.Div([
 
         # LEFT COLUMN
         html.Div(style={"flex":"1","minWidth":"330px"}, children=[
-            dcc.Upload(
-                id="upload",
-                children=html.Div(["Drag CSV or ", html.A("Select")]),
-                style={"border":"1px dashed #aaa",
-                       "height":"60px","textAlign":"center"}
-            ),
+            html.Div(style={"display":"flex","gap":"10px","marginBottom":"10px"}, children=[
+                html.Div(style={"flex":"1"}, children=[
+                    dcc.Upload(
+                        id="upload",
+                        children=html.Div(["Drag CSV or ", html.A("Select")]),
+                        style={"border":"1px dashed #aaa",
+                               "height":"60px","textAlign":"center"}
+                    ),
+                ]),
+                html.Button(
+                    "Load Sample",
+                    id="load-sample",
+                    style={"padding":"10px 15px","height":"60px","cursor":"pointer"}
+                ),
+            ]),
             html.Div(id="fileinfo"),
 
             html.H4("Objective selection"),
@@ -50,6 +59,9 @@ layout = html.Div([
                 ]),
                 dcc.Tab(label="Parallel Coordinates", value="pcp-tab", children=[
                     dcc.Graph(id="pcp", style={"height":"880px"})
+                ]),
+                dcc.Tab(label="Radar", value="radar-tab", children=[
+                    dcc.Graph(id="radar", style={"height":"880px"})
                 ])
             ])
         ])
