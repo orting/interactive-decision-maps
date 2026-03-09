@@ -25,9 +25,6 @@ def register_callbacks(app):
         Output("params", "data"),
         Output("metrics", "data"),
         Output("fileinfo", "children"),
-        Output("obj-x", "value"),
-        Output("obj-y", "value"),
-        Output("color-by", "value"),
         Input("upload", "contents"),
         Input("load-sample", "n_clicks"),
         prevent_initial_call=True
@@ -37,8 +34,7 @@ def register_callbacks(app):
         from pathlib import Path
         
         # Handle sample data button
-        is_sample = sample_clicks is not None and sample_clicks > 0
-        if is_sample:
+        if sample_clicks is not None and sample_clicks > 0:
             sample_path = Path(__file__).parent / "assets" / "sample_data.csv"
             with open(sample_path, 'r') as f:
                 csv_text = f.read()
@@ -54,21 +50,12 @@ def register_callbacks(app):
         F_norm = normalize(F_raw)
         pf = pareto_front(F_norm).tolist()
 
-        # Auto-select defaults when sample data is loaded
-        # obj-x/obj-y values are metric indices, color-by is the full column name
-        obj_x = 0 if is_sample else None  # metric_obj1 is at index 0
-        obj_y = 3 if is_sample else None  # metric_obj4 is at index 3
-        color_by = "param_feature2" if is_sample else None
-
         return (
             {"F": F_norm.tolist(), "pf": pf, "df": df.to_dict("records")},
             {"F_raw": F_raw.tolist(), "metrics": metrics, "params": params},
             params,
             metrics,
-            f"Loaded {len(df)} rows",
-            obj_x,
-            obj_y,
-            color_by
+            f"Loaded {len(df)} rows"
         )
 
     # ---------------------- BUILD CONTROLS ----------------------
