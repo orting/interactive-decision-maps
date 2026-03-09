@@ -42,10 +42,17 @@ layout = html.Div([
                      style={"border":"1px solid #aaa","padding":"8px"}),
         ]),
 
-        # RIGHT COLUMN
+        # RIGHT COLUMN - Tabbed layout for plots
         html.Div(style={"flex":"2"}, children=[
-            dcc.Graph(id="scatter", style={"height":"520px"}),
-            dcc.Graph(id="pcp", style={"height":"360px"})
+            dcc.Tabs(id="plot-tabs", children=[
+                dcc.Tab(label="Scatter", value="scatter-tab", children=[
+                    dcc.Graph(id="scatter", style={"height":"880px"})
+                ]),
+                dcc.Tab(label="Parallel Coordinates", value="pcp-tab", children=[
+                    dcc.Graph(id="pcp", style={"height":"880px"})
+                ])
+            ])
         ])
     ])
 ])
+

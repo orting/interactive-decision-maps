@@ -2,14 +2,14 @@
 
 ## Project Overview
 
-**idm-viewer** is a Python/Dash web app for exploring multi-objective datasets. It provides three linked visualizations: a 2D scatter plot (with Pareto front highlighting), parallel coordinates plot (PCP), and an inspection panel. Users upload CSV files with `param_*` and `metric_*` columns, then brush across metrics using sliders to filter and analyze data.
+**idm-viewer** is a Python/Dash web app for exploring multi-objective datasets. It provides linked visualizations (scatter plot, parallel coordinates) with an inspection panel. Users upload CSV files with `param_*` and `metric_*` columns, then brush across metrics using sliders to filter and analyze data. Plots are organized in a tabbed interface for easy navigation.
 
 ## Architecture
 
 The application follows a modular, callback-driven architecture:
 
 - **`app.py`**: Factory function that creates the Dash app and wires up callbacks (registered after app creation to avoid circular imports)
-- **`layout.py`**: Defines the UI structure using Dash HTML/DCC components (two-column layout: controls left, visualizations right)
+- **`layout.py`**: Defines the UI structure using Dash HTML/DCC components. Two-column layout: controls on the left, tabbed plots on the right (scatter, parallel coordinates). Easy to extend with additional plot tabs.
 - **`callbacks.py`**: Registers all Dash callbacks that handle CSV loading, slider brushing, point selection, and visualization updates
 - **`data.py`**: Pure functions for CSV parsing, normalization, Pareto front computation (both n-D and 2D), and range filtering
 - **`styling.py`**: UI styling constants (e.g., color scales)
@@ -78,6 +78,22 @@ The app is centered around **range-based brushing**: sliders control normalized 
 - **Grey**: all brushed points
 - **Red**: brushed points on the Pareto front
 - **Blue**: currently selected point (click a scatter point to select)
+
+## UI Layout: Tabbed Plots
+
+The visualization area uses `dcc.Tabs` to organize multiple plots. Each plot is in its own tab for a cleaner UI that scales well as more plots are added.
+
+**To add a new plot:**
+1. Add a new `dcc.Tab` in `layout.py` with a unique `value` and `id` for the graph
+2. Create a callback in `callbacks.py` that outputs to the new graph's `figure` property
+3. Add the graph output to the existing `update_plots` callback alongside scatter and Pcp
+
+Example:
+```python
+dcc.Tab(label="Heatmap", value="heatmap-tab", children=[
+    dcc.Graph(id="heatmap", style={"height":"880px"})
+])
+```
 
 ## Styling
 
