@@ -25,17 +25,26 @@ def register_callbacks(app):
         Output("params", "data"),
         Output("metrics", "data"),
         Output("fileinfo", "children"),
+        Output("obj-x", "value"),
+        Output("obj-y", "value"),
+        Output("color-by", "value"),
         Input("upload", "contents"),
         Input("load-sample", "n_clicks"),
         prevent_initial_call=True
     )
     def load(contents, sample_clicks):
+        import base64
+        from pathlib import Path
+        
         # Handle sample data button
-        if sample_clicks is not None and sample_clicks > 0:
-            from pathlib import Path
+        is_sample = sample_clicks is not None and sample_clicks > 0
+        if is_sample:
             sample_path = Path(__file__).parent / "assets" / "sample_data.csv"
             with open(sample_path, 'r') as f:
-                contents = f.read()
+                csv_text = f.read()
+            # Encode as base64 in the format expected by parse_csv
+            encoded = base64.b64encode(csv_text.encode()).decode()
+            contents = f"data:text/csv;base64,{encoded}"
         
         # SAFETY: first app load -> contents is None
         if contents is None:
@@ -45,12 +54,20 @@ def register_callbacks(app):
         F_norm = normalize(F_raw)
         pf = pareto_front(F_norm).tolist()
 
+        # Auto-select defaults when sample data is loaded
+        obj_x = "metric_obj1" if is_sample else None
+        obj_y = "metric_obj4" if is_sample else None
+        color_by = "param_feature2" if is_sample else None
+
         return (
             {"F": F_norm.tolist(), "pf": pf, "df": df.to_dict("records")},
             {"F_raw": F_raw.tolist(), "metrics": metrics, "params": params},
             params,
             metrics,
-            f"Loaded {len(df)} rows"
+            f"Loaded {len(df)} rows",
+            obj_x,
+            obj_y,
+            color_by
         )
 
     # ---------------------- BUILD CONTROLS ----------------------
