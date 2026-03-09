@@ -15,17 +15,6 @@ layout = html.Div([
 
         # LEFT COLUMN
         html.Div(style={"flex":"1","minWidth":"330px"}, children=[
-            html.Label("Theme"),
-            dcc.Dropdown(
-                id="theme",
-                options=[
-                    {"label":"Light Mode","value":"light"},
-                    {"label":"Dark Mode","value":"dark"},
-                ],
-                value="light",
-                clearable=False
-            ),
-
             dcc.Upload(
                 id="upload",
                 children=html.Div(["Drag CSV or ", html.A("Select")]),

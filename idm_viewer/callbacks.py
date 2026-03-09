@@ -12,7 +12,7 @@ from idm_viewer.data import (
     apply_ranges,
 )
 from idm_viewer.utils import strip_prefix, fmt_sci
-from idm_viewer.styling import template, main_colorscale
+from idm_viewer.styling import main_colorscale
 from idm_viewer.exporters import export_brushed
 
 
@@ -103,11 +103,10 @@ def register_callbacks(app):
         Input("metrics", "data"),
         Input({"type": "sld", "index": ALL}, "value"),
         Input("selected-index", "data"),
-        Input("color-by", "value"),
-        Input("theme", "value")
+        Input("color-by", "value")
     )
     def update_plots(objx, objy, store, raw, params, metrics,
-                     slider_vals, selected, colorby, theme):
+                     slider_vals, selected, colorby):
 
         # SAFETY: early renders before upload/selection
         if store is None or metrics is None or objx is None or objy is None:
@@ -151,6 +150,7 @@ def register_callbacks(app):
                 lines.append(f"{strip_prefix(m)}: {val}")
             hover.append("<br>".join(lines))
 
+        # Scatter plot — template set via Dash figure config
         scatter = {
             "data": [
                 {
@@ -163,7 +163,7 @@ def register_callbacks(app):
                 }
             ],
             "layout": {
-                "template": template(theme),
+                "template": None,
                 "title": f"{strip_prefix(metrics[objx])} vs {strip_prefix(metrics[objy])}",
                 "xaxis": {"title": strip_prefix(metrics[objx])},
                 "yaxis": {"title": strip_prefix(metrics[objy])},
@@ -217,6 +217,7 @@ def register_callbacks(app):
                 constraintrange=ranges[k]
             ))
 
+        # PCP plot — template set via Dash figure config
         pcp = {
             "data": [
                 {
@@ -229,7 +230,7 @@ def register_callbacks(app):
                     "dimensions": dims
                 }
             ],
-            "layout": {"template": template(theme)}
+            "layout": {"template": None}
         }
 
         # Selected line overlay
