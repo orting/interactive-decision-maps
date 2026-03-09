@@ -150,7 +150,7 @@ def register_callbacks(app):
                 lines.append(f"{strip_prefix(m)}: {val}")
             hover.append("<br>".join(lines))
 
-        # Scatter plot — template overridden by JS (plotly-theme.js)
+        # Scatter plot — template set via Dash figure config
         scatter = {
             "data": [
                 {
@@ -217,7 +217,7 @@ def register_callbacks(app):
                 constraintrange=ranges[k]
             ))
 
-        # PCP plot — template overridden by JS (plotly-theme.js)
+        # PCP plot — template set via Dash figure config
         pcp = {
             "data": [
                 {
