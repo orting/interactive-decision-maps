@@ -9,8 +9,26 @@ This viewer lets you explore multi-objective datasets with **slider-based brushi
   - **Parallel Coordinates**: All metrics for brushed points with constraint ranges
   - **Radar Plot**: Multi-objective profiles as polar dimensions
 - **Slider-based Brushing**: Filter solutions across all metrics with responsive updates
+- **Scaled/Unscaled Metrics**: Toggle between normalized [0,1] and raw values
 - **Sample Data Loader**: Quick-start with built-in test dataset
 - **Point Inspection**: Click any point to see its parameters and metrics
+
+## Gallery
+
+### Scatter Plot - Initial View
+![Scatter plot with sample data loaded](docs/screenshots/01-scatter.png)
+
+### Scatter Plot - With Brushing
+![Scatter plot with slider brushing applied](docs/screenshots/02-scatter-brushed.png)
+
+### Parallel Coordinates - Brushed Data
+![Parallel coordinates showing all metrics for brushed subset](docs/screenshots/03-parallel-coordinates-brushed.png)
+
+### Radar Plot - Normalized Metrics
+![Radar plot showing metric profiles in normalized scale](docs/screenshots/04-radar-brushed.png)
+
+### Radar Plot - Raw Values
+![Radar plot showing metric profiles in raw scale](docs/screenshots/05-radar-brushed-raw.png)
 
 ## How to interpret each plot
 
@@ -25,11 +43,10 @@ This viewer lets you explore multi-objective datasets with **slider-based brushi
 - One vertical axis per `metric_*`; values are normalized to [0,1] (lower is better).
 - **Grey lines**: all brushed points.
 - **Red lines** (when no point is selected): lines that are globally Pareto-optimal.
-- **Blue line**: the currently **selected** point (if any).
 - Axis shading (constraint range) reflects your **slider brush** per metric.
 
 ### Radar Plot
-- One polar axis per `metric_*`; values are normalized to [0,1] (lower is better).
+- One polar axis per `metric_*`; values normalized to [0,1] (or raw, see toggle).
 - **Semi-transparent traces**: all brushed points, colored by the selected dimension.
 - **Solid blue trace**: the currently **selected** point (highlighted for clarity).
 - Useful for understanding multi-objective trade-offs and comparing metric profiles across solutions.
@@ -38,8 +55,11 @@ This viewer lets you explore multi-objective datasets with **slider-based brushi
 - Shows **param_*** (parameters) and **metric_*** (metrics) for the selected point.
 - Color dimension selector to highlight patterns in the data.
 
-## Slider-based brushing (recommended)
+## Slider-based Brushing (Recommended)
 Use the sliders (left column) to **constrain every metric's range**. The constraints are applied to *all* points before plotting, so all views show only the brushed subset. This gives you reliable, responsive filtering without external events.
+
+## Metric Scales
+Toggle between **Normalized [0,1]** (for comparing metrics on equal footing) and **Raw values** (to see original units). Sliders, axes, and all visualizations automatically adjust.
 
 ## Quick Start
 
