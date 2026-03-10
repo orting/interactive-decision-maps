@@ -38,6 +38,17 @@ layout = html.Div([
             html.Label("Y objective"),
             dcc.Dropdown(id="obj-y"),
 
+            html.H4("Metric scale"),
+            dcc.RadioItems(
+                id="metric-scale",
+                options=[
+                    {"label": " Normalized [0,1]", "value": "normalized"},
+                    {"label": " Raw values", "value": "raw"}
+                ],
+                value="normalized",
+                inline=False
+            ),
+
             html.H4("Brush (sliders across all metrics)"),
             html.Div(id="sliders"),
 

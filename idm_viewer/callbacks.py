@@ -65,9 +65,11 @@ def register_callbacks(app):
         Output("sliders", "children"),
         Output("color-by", "options"),
         Input("metrics", "data"),
-        Input("params", "data")
+        Input("params", "data"),
+        Input("store-raw", "data"),
+        Input("metric-scale", "value")
     )
-    def build_controls(metrics, params):
+    def build_controls(metrics, params, raw, metric_scale):
         # SAFETY: both inputs may be None on first render
         if metrics is None or params is None:
             raise PreventUpdate
@@ -80,12 +82,26 @@ def register_callbacks(app):
 
         sliders = []
         for i, m in enumerate(metrics):
+            # Determine slider range based on metric scale
+            if metric_scale == "raw" and raw is not None:
+                F_raw = np.array(raw["F_raw"])
+                col_vals = F_raw[:, i]
+                slider_min = float(np.round(col_vals.min(), 3))
+                slider_max = float(np.round(col_vals.max(), 3))
+                slider_step = float(np.round((slider_max - slider_min) / 100, 4))
+                slider_val = [slider_min, slider_max]
+            else:
+                slider_min = 0
+                slider_max = 1
+                slider_step = 0.01
+                slider_val = [0, 1]
+            
             sliders.append(
                 html.Div([
                     html.Label(strip_prefix(m)),
                     dcc.RangeSlider(
                         id={"type": "sld", "index": i},
-                        min=0, max=1, step=0.01, value=[0, 1]
+                        min=slider_min, max=slider_max, step=slider_step, value=slider_val
                     )
                 ], style={"margin": "6px 0"})
             )
@@ -118,16 +134,21 @@ def register_callbacks(app):
         Input("metrics", "data"),
         Input({"type": "sld", "index": ALL}, "value"),
         Input("selected-index", "data"),
-        Input("color-by", "value")
+        Input("color-by", "value"),
+        Input("metric-scale", "value")
     )
     def update_plots(objx, objy, store, raw, params, metrics,
-                     slider_vals, selected, colorby):
+                     slider_vals, selected, colorby, metric_scale):
 
         # SAFETY: early renders before upload/selection
         if store is None or metrics is None or objx is None or objy is None:
             raise PreventUpdate
 
-        F = np.array(store["F"])
+        # Choose scaled or raw metrics
+        if metric_scale == "raw":
+            F = np.array(raw["F_raw"])
+        else:
+            F = np.array(store["F"])
         df = pd.DataFrame(store["df"])
         pf = np.array(store["pf"])
 
@@ -225,9 +246,17 @@ def register_callbacks(app):
         # ---- PCP
         dims = []
         for k, m in enumerate(metrics):
+            if metric_scale == "raw":
+                # For raw values, use the actual data range
+                col_vals = Fs[:, k]
+                dim_range = [float(col_vals.min()), float(col_vals.max())]
+            else:
+                # For normalized values, always [0, 1]
+                dim_range = [0, 1]
+            
             dims.append(dict(
                 label=strip_prefix(m),
-                range=[0, 1],
+                range=dim_range,
                 values=Fs[:, k],
                 constraintrange=ranges[k]
             ))
@@ -260,6 +289,16 @@ def register_callbacks(app):
                 })
 
         # ---- Radar plot (all metrics for brushed points)
+        if metric_scale == "raw":
+            # For raw values, calculate the range from data
+            radar_range = [
+                float(Fs.min()),
+                float(Fs.max())
+            ]
+        else:
+            # For normalized values, always [0, 1]
+            radar_range = [0, 1]
+        
         radar = {
             "data": [],
             "layout": {
@@ -267,7 +306,7 @@ def register_callbacks(app):
                 "polar": {
                     "radialaxis": {
                         "visible": True,
-                        "range": [0, 1],
+                        "range": radar_range,
                         "tickfont": {"size": 10}
                     },
                     "angularaxis": {
